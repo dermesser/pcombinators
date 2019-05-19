@@ -64,10 +64,6 @@ class ParseState:
             return ''
         return self._input[self._index:]
 
-    def sub(self, start, length):
-        assert self._index+start < self._index+start+length <= len(self._input)
-        return ParseState(self._input[self._index+start:self._index+start+length])
-
 class Parser:
     """Super class for all parsers. Implements operator overloading for easier
     chaining of parsers."""
@@ -191,7 +187,8 @@ class AtomicSequence(_Sequence):
     _atomic = True
 
 class OptimisticSequence(_Sequence):
-    """Execute a series of parsers after each other, as far as possible. Result is list of results of the parsers."""
+    """Execute a series of parsers after each other, as far as possible
+    (until the first parser fails). Result is list of results of the parsers."""
     _atomic = False
 
 class _Alternative(Parser):
@@ -323,6 +320,9 @@ class Regex(Parser):
 
 # Small specific parsers.
 
+def Nothing():
+    return String('')
+
 def CharSet(s):
     """Matches arbitrarily many characters from the set s (which can be a string).
     Result is string."""
@@ -335,6 +335,7 @@ def Integer():
 def Float():
     """Return a parser that parses floats and results in floats. Result is float."""
     def c(l):
+        """Convert parts of a number into a float."""
         if l and len(l) > 0:
             return float(''.join(l))
         return None
@@ -349,4 +350,4 @@ def NonEmptyString():
 
 def Whitespace():
     """Parse whitespace (space, newline, tab). Result is string."""
-    return CharSet(' \n\r\t')
+    return CharSet(' \n\r\t') | Nothing()
