@@ -27,8 +27,6 @@ class ParseState:
     def next(self):
         current = self.peek()
         self._index += 1
-        while not self.finished() and self.peek().isspace():
-            self._index += 1
         return current
 
     def peek(self):
@@ -88,7 +86,10 @@ class _Sequence(Parser):
                     return None, st
                 st.reset(before)
                 break
-            results.append(result)
+            if isinstance(result, list):
+                results.extend(result)
+            else:
+                results.append(result)
             st = st2
         return results, st2
     
@@ -146,12 +147,13 @@ class Regex(Parser):
         self._rx = rx
     
     def parse(self, st):
+        start = st.index()
         match = re.match(self._rx, st.remaining())
         if match is None:
             return None, st
         begin, end = match.span()
         result = match.group(0)
         if len(match.groups()) > 0:
-            result = match.groups()
-        st.reset(end)
+            result = list(match.groups())
+        st.reset(start+end)
         return result, st
