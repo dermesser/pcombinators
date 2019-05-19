@@ -119,11 +119,10 @@ class _Transform(Parser):
     def parse(self, st):
         initial = st.index()
         r, st2 = self._inner.parse(st)
-        try:
-            return self._transform(r), st2
-        except:
+        if r is None:
             st.reset(initial)
             return None, st
+        return self._transform(r), st2
 
 class _Sequence(Parser):
     _parsers = []
@@ -249,8 +248,7 @@ def Last(p):
 
 def Skip(p):
     """Omit the result of parser p, and replace it with []. Result is []."""
-    return p >> (lambda _: [])
-
+    return p >> (lambda r: [])
 
 # Parsers
 
