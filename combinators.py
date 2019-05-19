@@ -182,6 +182,9 @@ class Repeat(_Repeat):
     Result is list of results of the parsers."""
     _strict = False
 
+def Maybe(p):
+    return Repeat(p, 1)
+
 class AtomicSequence(_Sequence):
     """Execute a series of parsers after each other. All must succeed. Result is list of results of the parsers."""
     _atomic = True
@@ -267,10 +270,11 @@ class String(Parser):
     def parse(self, st):
         initial = st.index()
         s = self._s
-        while len(s) > 0 and not st.finished() and s[0] == st.peek():
+        i = 0
+        while i < len(s) and not st.finished() and s[i] == st.peek():
             st.next()
-            s = s[1:]
-        if len(s) == 0:
+            i += 1
+        if i == len(s):
             return (self._s, st)
         st.reset(initial)
         return (None, st)
@@ -328,11 +332,30 @@ def CharSet(s):
     Result is string."""
     return ConcatenateResults(Repeat(OneOf(s), -1))
 
-def Integer():
+def CanonicalInteger():
     """Return a parser that parses integers and results in an integer. Result is int."""
-    return Last(Whitespace() + (CharSet('0123456789') >> int))
+    return Last(Whitespace() + (ConcatenateResults(Maybe(String('-')) + CharSet('0123456789')) >> int))
 
-def Float():
+class Integer():
+    """Parser for integers of form [-]dddd[...]. Result is int.
+
+    This parser is up to twice as fast as CanonicalInteger and thus implemented
+    manually."""
+    _digits = CharSet('0123456789')
+
+    def parse(self, st):
+        initial = st.index()
+        multiplier = 1
+        minus, st = String('-').parse(st)
+        if minus is not None:
+            multiplier = -1
+        digits, st = self._digits.parse(st)
+        if digits is not None:
+            return int(digits)*multiplier, st
+        st.reset(initial)
+        return None, st
+
+def CanonicalFloat():
     """Return a parser that parses floats and results in floats. Result is float."""
     def c(l):
         """Convert parts of a number into a float."""
@@ -344,9 +367,35 @@ def Float():
             Repeat(OneOf('.'), 1) + CharSet('0123456789'))
     return (Skip(Whitespace()) + number) >> c
 
+class Float():
+    """Parses a float like [-]ddd[.ddd].
+
+    Float parses floats with more manual code, making it up to 40% faster than
+    CanonicalFloat."""
+    _digits = CharSet('0123456789')
+
+    def parse(self, st):
+        initial = st.index()
+        multiplier = 1
+        minus, st = String('-').parse(st)
+        if minus is not None:
+            multiplier = -1
+        big, st = self._digits.parse(st)
+        if big is None:
+            st.reset(initial)
+            return None, st
+        small = ''
+        dot, st = String('.').parse(st)
+        if dot is not None:
+            small, st = self._digits.parse(st)
+            if small is not None:
+                return float(big + '.' + small) * multiplier, st
+        return float(big) * multiplier, st
+
 def NonEmptyString():
-    """Return a parser that parses a string until the first whitespace, skipping whitespace before. Result is string."""
-    return Last(Skip(Whitespace()) + Regex('\w+'))
+    """Return a parser that parses a string until the first whitespace,
+    skipping whitespace before. Result is string."""
+    return Last(Whitespace() + Regex('\w+'))
 
 def Whitespace():
     """Parse whitespace (space, newline, tab). Result is string."""
