@@ -14,4 +14,21 @@ p = c.String('Hello') + c.Regex('([,.]) +') + c.String('World') + c.Regex('[.,?!
 
 p.parse(st)
 # >> (['Hello', ',', 'World', '!'], ParseState(Hello, World!<>))<Paste>
+
+(Float() + String(" ") + NonEmptyString()).parse(ParseState('1.22 abc'))
+# >> ([1.22, ' ', 'abc'], ParseState(1.22 abc<>))
+
+def upper(s):
+    return s.upper()
+
+# You can transform parser results with the >> (right shift) operator, and
+# repeat parsers with the * (multiplication) operator.
+
+# Parse two non-whitespace strings, converting them to uppercase, and a float,
+# multiplying the latter by 2.
+(
+ (NonEmptyString() >> upper) * 2 +
+ (Float() >> (lambda f: f * 2))
+).parse(ParseState("hello world 2.2"))
+# >> (['HELLO', 'WORLD', 4.4], ParseState(hello world 2.2<>))
 ```

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun May 19 11:20:01 2019
+Parser combinators losely inspired by Haskell's monadic parsers.
 
-@author: lbo
+The monad here is the result tuple (result, ParseState), which is returned
+by all Parser's parse() method.
 """
 
 import re
@@ -73,18 +74,53 @@ class Parser:
         return (None, st)
 
     def __add__(self, other):
+        """Chain parsers, only match if all match in sequence."""
         return AtomicSequence(self, other)
 
     def __mul__(self, times):
+        """Repeat a parser, exactly `times`."""
         return StrictRepeat(self, times)
 
     def __rmul__(self, times):
+        """Repeat a parser, exactly `times`."""
         return self.__mul__(times)
 
     def __or__(self, other):
-        return Alternative(self, other)
+        """Chain parsers as alternatives (first-match)."""
+        return FirstAlternative(self, other)
+
+    def __rshift__(self, fn):
+        """Transform the result of a parser using an unary function.
+
+        Example:
+            Regex('[a-z]+') >> lambda s: s[0]
+
+            consumes all lower case characters but results in only the first.
+
+            Regex('\d+') >> int >> (lambda i: i*2)
+
+            consume digits and convert them to an integer, multiplying it by two..
+        """
+        return _Transform(self, fn)
 
 # Combinators
+
+class _Transform(Parser):
+    _inner = None
+    _transform = lambda x: x
+
+    def __init__(self, inner, tf):
+        self._inner = inner
+        self._transform = tf
+
+    def parse(self, st):
+        initial = st.index()
+        r, st2 = self._inner.parse(st)
+        try:
+            return self._transform(r), st2
+        except:
+            st.reset(initial)
+            return None, st
 
 class _Sequence(Parser):
     _parsers = []
@@ -133,19 +169,19 @@ class _Repeat(Parser):
         return results, st
 
 class StrictRepeat(_Repeat):
-    """Expect exactly `repeat` matches of a parser."""
+    """Expect exactly `repeat` matches of a parser. Result is list of results of the parsers."""
     _strict = True
 
 class Repeat(_Repeat):
-    """Expect up to `repeat` matches of a parser."""
+    """Expect up to `repeat` matches of a parser. Result is list of results of the parsers"""
     _strict = False
 
 class AtomicSequence(_Sequence):
-    """Execute a series of parsers after each other. All must succeed."""
+    """Execute a series of parsers after each other. All must succeed. Result is list of results of the parsers."""
     _atomic = True
 
 class OptimisticSequence(_Sequence):
-    """Execute a series of parsers after each other, as far as possible."""
+    """Execute a series of parsers after each other, as far as possible. Result is list of results of the parsers."""
     _atomic = False
 
 class _Alternative(Parser):
@@ -157,6 +193,7 @@ class _Alternative(Parser):
         self._parsers = parsers
 
 class FirstAlternative(_Alternative):
+    """Attempt parsers until one matches. Result is result of that parser."""
 
     def parse(self, st):
         initial = st.index()
@@ -168,6 +205,7 @@ class FirstAlternative(_Alternative):
         return None, st
 
 class LongestAlternative(_Alternative):
+    """Attempt all parsers and return the longest match. Result is result of best parser."""
 
     def parse(self, st):
         matches = []
@@ -196,9 +234,21 @@ class LongestAlternative(_Alternative):
         st.reset(initial + best[0])
         return best[1], st
 
+# Some combinators can be implemented directly.
+
+def Last(p):
+    """Return the last result from the list of results of p. Result is scalar."""
+    return p >> (lambda l: l[-1] if isinstance(l, list) else l)
+
+def Skip(p):
+    """Omit the result of parser p, and replace it with []. Result is []."""
+    return p >> (lambda _: [])
+
+
 # Parsers
 
 class String(Parser):
+    """Consume a fixed string. Result is the string."""
     _s = ''
 
     def __init__(self, s):
@@ -215,9 +265,27 @@ class String(Parser):
         st.reset(initial)
         return (None, st)
 
+class CharSet(Parser):
+    """Parse characters in the given set. Result is string."""
+    _set = None
+
+    def __init__(self, s):
+        """
+        Example:
+            CharSet('abcd')
+            CharSet('0123456789')
+        """
+        self._set = set(s)
+
+    def parse(self, st):
+        result = ''
+        while not st.finished() and st.peek() in self._set:
+            result += st.next()
+        return result, st
+
 class Regex(Parser):
     """Parse a string using a regular expression. The result is either the
-    string or a tuple with all matched groups."""
+    string or a tuple with all matched groups. Result is string."""
     _rx = None
 
     def __init__(self, rx):
@@ -238,3 +306,21 @@ class Regex(Parser):
             result = match.group(1)
         st.reset(start+end)
         return result, st
+
+# Small specific parsers..
+
+def Integer():
+    """Return a parser that parses integers and results in an integer. Result is int."""
+    return Last(Whitespace() + (CharSet('0123456789') >> int))
+
+def Float():
+    """Return a parser that parses floats and results in floats. Result is float."""
+    return Last(Whitespace() + (CharSet('0123456789.') >> float))
+
+def NonEmptyString():
+    """Return a parser that parses a string until the first whitespace, skipping whitespace before. Result is string."""
+    return Last(Skip(Whitespace()) + Regex('\w+'))
+
+def Whitespace():
+    """Parse whitespace (space, newline, tab). Result is string."""
+    return CharSet(' \n\r\t')
