@@ -17,6 +17,9 @@ class Util:
             a.append(e)
         return a
 
+def ps(s):
+    return ParseState(s)
+
 class ParseState:
     """Encapsulates state as the parser goes through input."""
 
@@ -93,7 +96,7 @@ class Parser:
         """Transform the result of a parser using an unary function.
 
         Example:
-            Regex('[a-z]+') >> lambda s: s[0]
+            Regex('[a-z]+') >> (lambda s: s[0])
 
             consumes all lower case characters but results in only the first.
 
@@ -157,7 +160,9 @@ class _Repeat(Parser):
     def parse(self, st):
         results = []
         initial = st.index()
-        for i in range(0, self._times):
+        i = 0
+
+        while i < self._times or self._times < 0:
             r, st2 = self._parser.parse(st)
             if r == None:
                 if self._strict:
@@ -166,6 +171,7 @@ class _Repeat(Parser):
                 return results, st2
             Util.extend_results(results, r)
             st = st2
+            i += 1
         return results, st
 
 class StrictRepeat(_Repeat):
@@ -173,7 +179,8 @@ class StrictRepeat(_Repeat):
     _strict = True
 
 class Repeat(_Repeat):
-    """Expect up to `repeat` matches of a parser. Result is list of results of the parsers"""
+    """Expect up to `repeat` matches of a parser. -1 means indefinitely many matches.
+    Result is list of results of the parsers."""
     _strict = False
 
 class AtomicSequence(_Sequence):
@@ -266,7 +273,7 @@ class String(Parser):
         return (None, st)
 
 class CharSet(Parser):
-    """Parse characters in the given set. Result is string."""
+    """Parse characters in the given set. Result is string or None, if none were parsed."""
     _set = None
 
     def __init__(self, s):
@@ -281,6 +288,8 @@ class CharSet(Parser):
         result = ''
         while not st.finished() and st.peek() in self._set:
             result += st.next()
+        if len(result) == 0:
+            return None, st
         return result, st
 
 class Regex(Parser):
@@ -307,7 +316,7 @@ class Regex(Parser):
         st.reset(start+end)
         return result, st
 
-# Small specific parsers..
+# Small specific parsers.
 
 def Integer():
     """Return a parser that parses integers and results in an integer. Result is int."""
