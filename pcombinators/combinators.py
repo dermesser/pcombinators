@@ -7,8 +7,6 @@ The monad here is the result tuple (result, ParseState), which is returned
 by all Parser's parse() method.
 """
 
-import re
-
 class Util:
     def extend_results(a, e):
         if isinstance(e, list):
@@ -27,6 +25,7 @@ class ParseState:
     _index = 0
 
     def __init__(self, s):
+        """Create a ParseState object from str s, representing the input to be parsed."""
         self._input = s
 
     def __repr__(self):
@@ -70,6 +69,9 @@ class Parser:
     type = None
 
     def parse(self, st):
+        """Call parse() on any class inheriting from this one. It will consume
+        the ParseState st and return the parse result (depending on the parsers used).
+        """
         return (None, st)
 
     def __add__(self, other):
