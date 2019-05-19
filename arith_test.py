@@ -8,35 +8,16 @@ Let's test the combinators in a real world application!
 
 from combinators import *
 
-class Parens(Parser):
 
-    def parse(self, st):
-        initial = st.index()
+def Parens():
+    return (Operator('(') + Term() + Operator(')')) >> (lambda l: l[1])
 
-        p1, st = Operator('(').parse(st)
-        print('pr', p1, st)
-        if p1 is None:
-            st.reset(initial)
-            return None, st
-
-        term, st = Term().parse(st)
-        print('pr', term, st)
-        if term is None:
-            st.reset(initial)
-            return None, st
-
-        p2, st = Operator(')').parse(st)
-        print('pr', p2, st)
-        if p2 is None:
-            print('No closing paren!')
-            st.reset(initial)
-            return None, st
-
-        return term, st
+def Variable():
+    return Last(Whitespace() + Regex('\w+'))
 
 def Atom():
-    """An atom is a variable or a float."""
-    return (Float() | Parens() | Regex('\w+'))
+    """An atom is a variable or a float or a parentheses term."""
+    return (Variable() | Parens() | Float())
 
 def Operator(set):
     """An operator or parenthesis."""
