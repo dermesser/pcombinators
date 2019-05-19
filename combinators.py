@@ -254,6 +254,10 @@ def Skip(p):
     """Omit the result of parser p, and replace it with []. Result is []."""
     return p >> (lambda r: [])
 
+def ConcatenateResults(p):
+    """Concatenate string results into a single string. Result is string."""
+    return p >> (lambda l: ''.join(l) if l and len(l) > 0 else None)
+
 # Parsers
 
 class String(Parser):
@@ -287,12 +291,11 @@ class OneOf(Parser):
         self._set = set(s)
 
     def parse(self, st):
-        result = ''
         if not st.finished() and st.peek() in self._set:
-            result = st.next()
-        if len(result) == 0:
+            return st.next(), st
+        else:
             return None, st
-        return result, st
+
 
 class Regex(Parser):
     """Parse a string using a regular expression. The result is either the
@@ -321,7 +324,9 @@ class Regex(Parser):
 # Small specific parsers.
 
 def CharSet(s):
-    return Repeat(OneOf(s), -1) >> (lambda l: ''.join(l))
+    """Matches arbitrarily many characters from the set s (which can be a string).
+    Result is string."""
+    return ConcatenateResults(Repeat(OneOf(s), -1))
 
 def Integer():
     """Return a parser that parses integers and results in an integer. Result is int."""
@@ -329,10 +334,14 @@ def Integer():
 
 def Float():
     """Return a parser that parses floats and results in floats. Result is float."""
+    def c(l):
+        if l and len(l) > 0:
+            return float(''.join(l))
+        return None
     number = OptimisticSequence(
             Repeat(OneOf('-'), 1) + CharSet('0123456789'),
             Repeat(OneOf('.'), 1) + CharSet('0123456789'))
-    return (Skip(Whitespace()) + number) >> (lambda l: float(''.join(l)))
+    return (Skip(Whitespace()) + number) >> c
 
 def NonEmptyString():
     """Return a parser that parses a string until the first whitespace, skipping whitespace before. Result is string."""
