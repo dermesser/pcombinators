@@ -77,11 +77,11 @@ class Parser:
         return AtomicSequence(self, other)
 
     def __mul__(self, times):
-        """Repeat a parser, exactly `times`."""
+        """Repeat a parser exactly `times`."""
         return StrictRepeat(self, times)
 
     def __rmul__(self, times):
-        """Repeat a parser, exactly `times`."""
+        """Repeat a parser exactly `times`."""
         return self.__mul__(times)
 
     def __or__(self, other):
@@ -101,6 +101,11 @@ class Parser:
             consume digits and convert them to an integer, multiplying it by two..
         """
         return _Transform(self, fn)
+
+    def then(self, next):
+        """Consume part of the input, discarding it, and return the result
+        parsed by the supplied next parser."""
+        return Last(AtomicSequence(self, next))
 
 # Combinators
 
@@ -147,6 +152,16 @@ class _Sequence(Parser):
             st = st2
         return results, st2
 
+
+class AtomicSequence(_Sequence):
+    """Execute a series of parsers after each other. All must succeed. Result is list of results of the parsers."""
+    _atomic = True
+
+class OptimisticSequence(_Sequence):
+    """Execute a series of parsers after each other, as far as possible
+    (until the first parser fails). Result is list of results of the parsers."""
+    _atomic = False
+
 class _Repeat(Parser):
     _parser = None
     _times = 0
@@ -184,15 +199,6 @@ class Repeat(_Repeat):
 
 def Maybe(p):
     return Repeat(p, 1)
-
-class AtomicSequence(_Sequence):
-    """Execute a series of parsers after each other. All must succeed. Result is list of results of the parsers."""
-    _atomic = True
-
-class OptimisticSequence(_Sequence):
-    """Execute a series of parsers after each other, as far as possible
-    (until the first parser fails). Result is list of results of the parsers."""
-    _atomic = False
 
 class _Alternative(Parser):
     """Attempt a series of parsers and return the result of the first one matching."""
@@ -325,6 +331,7 @@ class Regex(Parser):
 # Small specific parsers.
 
 def Nothing():
+    """Matches the empty string, and always succeeds."""
     return String('')
 
 def CharSet(s):
@@ -332,28 +339,11 @@ def CharSet(s):
     Result is string."""
     return ConcatenateResults(Repeat(OneOf(s), -1))
 
+# See section below for optimized versions of the following parsers.
+
 def CanonicalInteger():
     """Return a parser that parses integers and results in an integer. Result is int."""
     return Last(Whitespace() + (ConcatenateResults(Maybe(String('-')) + CharSet('0123456789')) >> int))
-
-class Integer():
-    """Parser for integers of form [-]dddd[...]. Result is int.
-
-    This parser is up to twice as fast as CanonicalInteger and thus implemented
-    manually."""
-    _digits = CharSet('0123456789')
-
-    def parse(self, st):
-        initial = st.index()
-        multiplier = 1
-        minus, st = String('-').parse(st)
-        if minus is not None:
-            multiplier = -1
-        digits, st = self._digits.parse(st)
-        if digits is not None:
-            return int(digits)*multiplier, st
-        st.reset(initial)
-        return None, st
 
 def CanonicalFloat():
     """Return a parser that parses floats and results in floats. Result is float."""
@@ -366,6 +356,17 @@ def CanonicalFloat():
             Repeat(OneOf('-'), 1) + CharSet('0123456789'),
             Repeat(OneOf('.'), 1) + CharSet('0123456789'))
     return (Skip(Whitespace()) + number) >> c
+
+def NonEmptyString():
+    """Return a parser that parses a string until the first whitespace,
+    skipping whitespace before. Result is string."""
+    return Last(Whitespace() + Regex('\w+'))
+
+def Whitespace():
+    """Parse whitespace (space, newline, tab). Result is string."""
+    return CharSet(' \n\r\t') | Nothing()
+
+# Optimized parsers
 
 class Float():
     """Parses a float like [-]ddd[.ddd].
@@ -392,11 +393,21 @@ class Float():
                 return float(big + '.' + small) * multiplier, st
         return float(big) * multiplier, st
 
-def NonEmptyString():
-    """Return a parser that parses a string until the first whitespace,
-    skipping whitespace before. Result is string."""
-    return Last(Whitespace() + Regex('\w+'))
+class Integer():
+    """Parser for integers of form [-]dddd[...]. Result is int.
 
-def Whitespace():
-    """Parse whitespace (space, newline, tab). Result is string."""
-    return CharSet(' \n\r\t') | Nothing()
+    This parser is up to twice as fast as CanonicalInteger and thus implemented
+    manually."""
+    _digits = CharSet('0123456789')
+
+    def parse(self, st):
+        initial = st.index()
+        multiplier = 1
+        minus, st = String('-').parse(st)
+        if minus is not None:
+            multiplier = -1
+        digits, st = self._digits.parse(st)
+        if digits is not None:
+            return int(digits)*multiplier, st
+        st.reset(initial)
+        return None, st
