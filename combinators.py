@@ -122,7 +122,11 @@ class _Transform(Parser):
         if r is None:
             st.reset(initial)
             return None, st
-        return self._transform(r), st2
+        try:
+            return self._transform(r), st2
+        except Exception as e:
+            st.reset(initial)
+            raise Exception('{} (at {} (col {}))'.format(e, st, st.index()))
 
 class _Sequence(Parser):
     _parsers = []
@@ -325,7 +329,10 @@ def Integer():
 
 def Float():
     """Return a parser that parses floats and results in floats. Result is float."""
-    return Last(Whitespace() + (CharSet('0123456789.') >> float))
+    number = OptimisticSequence(
+            Repeat(OneOf('-'), 1) + CharSet('0123456789'),
+            Repeat(OneOf('.'), 1) + CharSet('0123456789'))
+    return (Skip(Whitespace()) + number) >> (lambda l: float(''.join(l)))
 
 def NonEmptyString():
     """Return a parser that parses a string until the first whitespace, skipping whitespace before. Result is string."""
