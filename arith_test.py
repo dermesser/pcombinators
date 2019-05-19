@@ -31,13 +31,6 @@ def Power():
             (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
             )
 
-class Psower(Parser):
-
-    def parse(self, st):
-        p = OptimisticSequence(Last(Atom()), Operator('^'), Last(Atom()))
-        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
-        return to_tuple.parse(st)
-
 class Product(Parser):
 
     def parse(self, st):
