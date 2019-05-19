@@ -10,10 +10,12 @@ from combinators import *
 
 
 def Parens():
+    """Parentheses contain a term."""
     return (Operator('(') + Term() + Operator(')')) >> (lambda l: l[1])
 
 def Variable():
-    return Last(Whitespace() + Regex('\w+'))
+    """A variable consists of several letters."""
+    return Last(Whitespace() + Regex('[a-zA-Z]+[0-9]*'))
 
 def Atom():
     """An atom is a variable or a float or a parentheses term."""
@@ -23,52 +25,35 @@ def Operator(set):
     """An operator or parenthesis."""
     return Last(Skip(Whitespace()) + OneOf(set))
 
+def Power():
+    return (
+            OptimisticSequence(Last(Atom()), Operator('^'), Last(Atom())) >>
+            (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
+            )
+
+class Psower(Parser):
+
+    def parse(self, st):
+        p = OptimisticSequence(Last(Atom()), Operator('^'), Last(Atom()))
+        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
+        return to_tuple.parse(st)
+
 class Product(Parser):
 
     def parse(self, st):
-        initial = st.index()
-
-        left, st = Atom().parse(st)
-        print('p', left, st)
-        if left is None:
-            st.reset(initial)
-            return None, st
-
-        op, st = Operator('*/').parse(st)
-        print('p', op, st)
-        if op is None:
-            return left, st
-
-        right, st = Product().parse(st)
-        print('p', right, st)
-        if right is None:
-            st.reset(initial)
-            return None, st
-        return ((left, op, right), st)
+        # Try to parse an atom, a product operator, and another product.
+        p = OptimisticSequence(Power(), Operator('*/'), Product())
+        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
+        return to_tuple.parse(st)
 
 class Term(Parser):
 
     def parse(self, st):
-        initial = st.index()
-
-        left, st = Product().parse(st)
-        print('t', left, st)
-        if left is None:
-            st.reset(initial)
-            return None, st
-
-        op, st = Operator('+-').parse(st)
-        print('t', op, st)
-        if op is None:
-            return left, st
-
-        right, st = Term().parse(st)
-        print(right, st)
-        if right is None:
-            st.reset(initial)
-            return None, st
-
-        return (left, op, right), st
+        # Try to parse a product, then a sum operator, then another term.
+        # OptimisticSequence will just return a product if there is no sum operator.
+        p = OptimisticSequence(Product(), Operator('+-'), Term())
+        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
+        return to_tuple.parse(st)
 
 def pretty_print(tpl):
     # tpl is a (left, op, right) tuple or a scalar.
