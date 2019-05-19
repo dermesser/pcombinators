@@ -9,24 +9,29 @@ Let's test the combinators in a real world application!
 from combinators import *
 
 class Parens(Parser):
+
     def parse(self, st):
         initial = st.index()
+
         p1, st = Operator('(').parse(st)
         print('pr', p1, st)
         if p1 is None:
             st.reset(initial)
             return None, st
+
         term, st = Term().parse(st)
         print('pr', term, st)
         if term is None:
             st.reset(initial)
             return None, st
+
         p2, st = Operator(')').parse(st)
         print('pr', p2, st)
         if p2 is None:
             print('No closing paren!')
             st.reset(initial)
             return None, st
+
         return term, st
 
 def Atom():
@@ -34,7 +39,8 @@ def Atom():
     return (Float() | Parens() | Regex('\w+'))
 
 def Operator(set):
-    return Last(Skip(Whitespace()) + CharSet(set))
+    """An operator or parenthesis."""
+    return Last(Skip(Whitespace()) + OneOf(set))
 
 class Product(Parser):
 
@@ -91,6 +97,7 @@ def pretty_print(tpl):
     return '({} {} {})'.format(pretty_print(tpl[0]), tpl[1], pretty_print(tpl[2]))
 
 def parse_and_print(expr):
+    """Parse an expression string and return a string of the parsing result."""
     parsed, st = Term().parse(ps(expr))
     if parsed is None:
         print('Parse error :(', st)

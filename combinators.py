@@ -272,7 +272,7 @@ class String(Parser):
         st.reset(initial)
         return (None, st)
 
-class CharSet(Parser):
+class OneOf(Parser):
     """Parse characters in the given set. Result is string or None, if none were parsed."""
     _set = None
 
@@ -286,8 +286,8 @@ class CharSet(Parser):
 
     def parse(self, st):
         result = ''
-        while not st.finished() and st.peek() in self._set:
-            result += st.next()
+        if not st.finished() and st.peek() in self._set:
+            result = st.next()
         if len(result) == 0:
             return None, st
         return result, st
@@ -317,6 +317,9 @@ class Regex(Parser):
         return result, st
 
 # Small specific parsers.
+
+def CharSet(s):
+    return Repeat(OneOf(s), -1) >> (lambda l: ''.join(l))
 
 def Integer():
     """Return a parser that parses integers and results in an integer. Result is int."""
