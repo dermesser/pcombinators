@@ -8,6 +8,14 @@ Created on Sun May 19 11:20:01 2019
 
 import re
 
+class Util:
+    def extend_results(a, e):
+        if isinstance(e, list):
+            a.extend(e)
+        else:
+            a.append(e)
+        return a
+
 class ParseState:
     """Encapsulates state as the parser goes through input."""
 
@@ -46,34 +54,45 @@ class ParseState:
 
     def finished(self):
         return self._index == len(self._input)
-    
+
     def remaining(self):
         if self.finished():
             return ''
         return self._input[self._index:]
-    
+
     def sub(self, start, length):
         assert self._index+start < self._index+start+length <= len(self._input)
         return ParseState(self._input[self._index+start:self._index+start+length])
 
 class Parser:
+    """Super class for all parsers. Implements operator overloading for easier
+    chaining of parsers."""
     type = None
-    
+
     def parse(self, st):
         return (None, st)
-    
+
     def __add__(self, other):
         return AtomicSequence(self, other)
-    
+
+    def __mul__(self, times):
+        return StrictRepeat(self, times)
+
+    def __rmul__(self, times):
+        return self.__mul__(times)
+
+    def __or__(self, other):
+        return Alternative(self, other)
+
 # Combinators
-        
+
 class _Sequence(Parser):
     _parsers = []
     _atomic = None
-    
+
     def __init__(self, *parsers):
         self._parsers = parsers
-    
+
     def parse(self, st):
         results = []
         initial = st.index()
@@ -86,13 +105,41 @@ class _Sequence(Parser):
                     return None, st
                 st.reset(before)
                 break
-            if isinstance(result, list):
-                results.extend(result)
-            else:
-                results.append(result)
+            Util.extend_results(results, result)
             st = st2
         return results, st2
-    
+
+class _Repeat(Parser):
+    _parser = None
+    _times = 0
+    _strict = None
+
+    def __init__(self, parser, repeat):
+        self._parser = parser
+        self._times = repeat
+
+    def parse(self, st):
+        results = []
+        initial = st.index()
+        for i in range(0, self._times):
+            r, st2 = self._parser.parse(st)
+            if r == None:
+                if self._strict:
+                    st.reset(initial)
+                    return None, st
+                return results, st2
+            Util.extend_results(results, r)
+            st = st2
+        return results, st
+
+class StrictRepeat(_Repeat):
+    """Expect exactly `repeat` matches of a parser."""
+    _strict = True
+
+class Repeat(_Repeat):
+    """Expect up to `repeat` matches of a parser."""
+    _strict = False
+
 class AtomicSequence(_Sequence):
     """Execute a series of parsers after each other. All must succeed."""
     _atomic = True
@@ -101,13 +148,16 @@ class OptimisticSequence(_Sequence):
     """Execute a series of parsers after each other, as far as possible."""
     _atomic = False
 
-class Alternative(Parser):
+class _Alternative(Parser):
     """Attempt a series of parsers and return the result of the first one matching."""
     _parsers = []
-    
+    _longest = None
+
     def __init__(self, *parsers):
         self._parsers = parsers
-    
+
+class FirstAlternative(_Alternative):
+
     def parse(self, st):
         initial = st.index()
         for p in self._parsers:
@@ -117,14 +167,43 @@ class Alternative(Parser):
             st.reset(initial)
         return None, st
 
+class LongestAlternative(_Alternative):
+
+    def parse(self, st):
+        matches = []
+        initial = st.index()
+        for p in self._parsers:
+            r, st2 = p.parse(st)
+            if r is None:
+                st.reset(initial)
+                continue
+            matches.append((st2.index() - initial, r))
+            st = st2
+            st.reset(initial)
+
+        if len(matches) == 0:
+            st.reset(initial)
+            return None, st
+        # Stable sort!
+        matches.sort(key=lambda t: t[0])
+        # Return first element that had longest match.
+        matches.reverse()
+        best = matches[0]
+        for r in matches[1:]:
+            if r[0] < best[0]:
+                break
+            best = r
+        st.reset(initial + best[0])
+        return best[1], st
+
 # Parsers
-    
+
 class String(Parser):
     _s = ''
-    
+
     def __init__(self, s):
         self._s = s
-    
+
     def parse(self, st):
         initial = st.index()
         s = self._s
@@ -140,12 +219,12 @@ class Regex(Parser):
     """Parse a string using a regular expression. The result is either the
     string or a tuple with all matched groups."""
     _rx = None
-    
+
     def __init__(self, rx):
         if not isinstance(rx, re.Pattern):
             rx = re.compile(rx)
         self._rx = rx
-    
+
     def parse(self, st):
         start = st.index()
         match = re.match(self._rx, st.remaining())
@@ -153,7 +232,9 @@ class Regex(Parser):
             return None, st
         begin, end = match.span()
         result = match.group(0)
-        if len(match.groups()) > 0:
+        if len(match.groups()) > 1:
             result = list(match.groups())
+        elif len(match.groups()) > 0:
+            result = match.group(1)
         st.reset(start+end)
         return result, st
