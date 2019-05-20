@@ -63,6 +63,12 @@ class ParseState:
             return ''
         return self._input[self._index:]
 
+    class ParseException(Exception):
+        pass
+
+    def error(self, msg):
+        raise ParseException(msg)
+
 class Parser:
     """Super class for all parsers. Implements operator overloading for easier
     chaining of parsers."""

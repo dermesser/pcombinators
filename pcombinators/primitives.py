@@ -56,7 +56,6 @@ class OneOf(Parser):
         else:
             return None, st
 
-
 class Regex(Parser):
     """Parse a string using a regular expression. The result is either the
     string or a tuple with all matched groups. Result is string."""
