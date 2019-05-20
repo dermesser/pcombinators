@@ -15,38 +15,42 @@ def Parens():
 
 def Variable():
     """A variable consists of several letters."""
-    return Last(Whitespace() + Regex('[a-zA-Z]+[0-9]*'))
+    return (Skip(Whitespace()) + Regex('[a-zA-Z]+[0-9]*'))
 
 def Atom():
     """An atom is a variable or a float or a parentheses term."""
-    return (Variable() | Parens() | Float())
+    return (Variable() | Parens() | (Skip(Whitespace()) + Float()))
 
 def Operator(set):
     """An operator or parenthesis."""
     return Last(Skip(Whitespace()) + OneOf(set))
 
+def operator_result_to_tuple(l):
+    if len(l) == 1:
+        return l[0]
+    elif len(l) == 3:
+        return tuple(l)
+    else:
+        # Parse failed if not either 1 or 3.
+        raise Exception("Parse failed: Missing operand")
+
 def Power():
-    return (
-            OptimisticSequence(Last(Atom()), Operator('^'), Last(Atom())) >>
-            (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
-            )
+    return (OptimisticSequence(Last(Atom()), Operator('^') + Atom()) >> operator_result_to_tuple)
 
 class Product(Parser):
 
     def parse(self, st):
         # Try to parse an atom, a product operator, and another product.
-        p = OptimisticSequence(Power(), Operator('*/'), Product())
-        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
-        return to_tuple.parse(st)
+        p = OptimisticSequence(Power(), Operator('*/') + Product()) >> operator_result_to_tuple
+        return p.parse(st)
 
 class Term(Parser):
 
     def parse(self, st):
         # Try to parse a product, then a sum operator, then another term.
         # OptimisticSequence will just return a product if there is no sum operator.
-        p = OptimisticSequence(Product(), Operator('+-'), Term())
-        to_tuple = p >> (lambda l: (l[0], l[1], l[2]) if len(l) == 3 else l[0])
-        return to_tuple.parse(st)
+        p = OptimisticSequence(Product(), Operator('+-') + Term()) >> operator_result_to_tuple
+        return p.parse(st)
 
 def pretty_print(tpl):
     # tpl is a (left, op, right) tuple or a scalar.
