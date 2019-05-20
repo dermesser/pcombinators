@@ -162,12 +162,23 @@ class _Sequence(Parser):
 
 
 class AtomicSequence(_Sequence):
-    """Execute a series of parsers after each other. All must succeed. Result is list of results of the parsers."""
+    """Execute a series of parsers after each other. All must succeed. Result
+    is a merged list of results of the parsers.
+
+    This means that if your parser returns a list and you want to not merge it with the results of other
+    parsers in the repetition, you should wrap the list inside another list. E.g.:
+
+    (List() >> (lambda l: [l])) + Skip(String("<separator>")) + (List() >> (lambda l: [l]))"""
     _atomic = True
 
 class OptimisticSequence(_Sequence):
     """Execute a series of parsers after each other, as far as possible
-    (until the first parser fails). Result is list of results of the parsers."""
+    (until the first parser fails). Result is a merged list of results of the parsers.
+
+    This means that if your parser returns a list and you want to not merge it with the results of other
+    parsers in the repetition, you should wrap the list inside another list. E.g.:
+
+    (List() >> (lambda l: [l])) + Skip(String("<separator>")) + (List() >> (lambda l: [l]))"""
     _atomic = False
 
 class _Repeat(Parser):
@@ -202,7 +213,7 @@ class StrictRepeat(_Repeat):
 
 class Repeat(_Repeat):
     """Expect up to `repeat` matches of a parser. -1 means indefinitely many matches.
-    Result is list of results of the parsers."""
+    Result is a merged list of results of the parsers."""
     _strict = False
 
 def Maybe(p):

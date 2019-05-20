@@ -39,8 +39,9 @@ class String(Parser):
         return (None, st)
 
 class OneOf(Parser):
-    """Parse characters in the given set. Result is string or None, if none were parsed."""
+    """Parse a character in the given set. Result is string or None, if none were parsed."""
     _set = None
+    _inverse = False
 
     def __init__(self, s):
         """
@@ -51,10 +52,14 @@ class OneOf(Parser):
         self._set = set(s)
 
     def parse(self, st):
-        if not st.finished() and st.peek() in self._set:
+        if not st.finished() and (self._inverse ^ (st.peek() in self._set)):
             return st.next(), st
         else:
             return None, st
+
+class NoneOf(OneOf):
+    """Parse a character not in the set. Result is string."""
+    _inverse = True
 
 class Regex(Parser):
     """Parse a string using a regular expression. The result is either the
@@ -88,6 +93,10 @@ def CharSet(s):
     """Matches arbitrarily many characters from the set s (which can be a string).
     Result is string."""
     return ConcatenateResults(Repeat(OneOf(s), -1))
+
+def NoneInSet(s):
+    """Inverse of CharSet (parse as long as character is not in set). Result is string."""
+    return ConcatenateResults(Repeat(NoneOf(s), -1))
 
 # See section below for optimized versions of the following parsers.
 
