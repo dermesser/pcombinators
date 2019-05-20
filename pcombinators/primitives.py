@@ -8,7 +8,7 @@ Created on Sun May 19 21:15:30 2019
 
 import re
 
-from pcombinators.combinators import (
+from combinators import (
         Parser,
         ConcatenateResults,
         OptimisticSequence,

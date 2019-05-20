@@ -7,7 +7,7 @@ Let's test the combinators in a real world application!
 """
 
 from combinators import *
-
+from primitives import *
 
 def Parens():
     """Parentheses contain a term."""
