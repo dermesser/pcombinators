@@ -15,11 +15,11 @@ def Parens():
 
 def Variable():
     """A variable consists of several letters."""
-    return (Skip(Whitespace()) + Regex('[a-zA-Z]+[0-9]*'))
+    return Last(Skip(Whitespace()) + Regex('[a-zA-Z]+[0-9]*'))
 
 def Atom():
     """An atom is a variable or a float or a parentheses term."""
-    return (Variable() | Parens() | (Skip(Whitespace()) + Float()))
+    return (Variable() | Parens() | Last(Skip(Whitespace()) + Float()))
 
 def Operator(set):
     """An operator or parenthesis."""
@@ -28,14 +28,14 @@ def Operator(set):
 def operator_result_to_tuple(l):
     if len(l) == 1:
         return l[0]
-    elif len(l) == 3:
-        return tuple(l)
+    elif len(l) == 2 and len(l[1]) == 2:
+        return (l[0], l[1][0], l[1][1])
     else:
         # Parse failed if not either 1 or 3.
         raise Exception("Parse failed: Missing operand")
 
 def Power():
-    return (OptimisticSequence(Last(Atom()), Operator('^') + Atom()) >> operator_result_to_tuple)
+    return (OptimisticSequence(Atom(), Operator('^') + Atom()) >> operator_result_to_tuple)
 
 class Product(Parser):
 
