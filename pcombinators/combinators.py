@@ -135,7 +135,7 @@ class _Transform(Parser):
             return self._transform(r), st2
         except Exception as e:
             st.reset(initial)
-            raise Exception('{} (in {} at {} (col {}))'.format(e, self._transform, st, st.index()))
+            raise Exception('{} (at {} (col {}))'.format(e, st, st.index()))
 
 class _Sequence(Parser):
     _parsers = []
@@ -156,8 +156,7 @@ class _Sequence(Parser):
                     return None, st
                 st.reset(before)
                 break
-            if result is not SKIP_MARK:
-                results.append(result)
+            Util.extend_results(results, result)
             st = st2
         return results, st2
 
@@ -203,8 +202,7 @@ class _Repeat(Parser):
                     st.reset(initial)
                     return None, st
                 return results, st2
-            if r is not SKIP_MARK:
-                results.append(r)
+            Util.extend_results(results, r)
             st = st2
             i += 1
         return results, st
@@ -275,18 +273,11 @@ class LongestAlternative(_Alternative):
 
 def Last(p):
     """Return the last result from the list of results of p. Result is scalar."""
-    def last(l):
-        if isinstance(l, list):
-            if len(l) == 0:
-                return l
-            return l[-1]
-    return p >> last
-
-SKIP_MARK = []
+    return p >> (lambda l: l[-1] if isinstance(l, list) else l)
 
 def Skip(p):
     """Omit the result of parser p, and replace it with []. Result is []."""
-    return p >> (lambda r: SKIP_MARK)
+    return p >> (lambda r: [])
 
 def ConcatenateResults(p):
     """Concatenate string results into a single string. Result is string."""
