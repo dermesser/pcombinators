@@ -127,7 +127,7 @@ def Whitespace():
 
 # Optimized parsers
 
-class Float():
+class Float(Parser):
     """Parses a float like [-]ddd[.ddd].
 
     Float parses floats with more manual code, making it up to 40% faster than
@@ -152,7 +152,7 @@ class Float():
                 return float(big + '.' + small) * multiplier, st
         return float(big) * multiplier, st
 
-class Integer():
+class Integer(Parser):
     """Parser for integers of form [-]dddd[...]. Result is int.
 
     This parser is up to twice as fast as CanonicalInteger and thus implemented
