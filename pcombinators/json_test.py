@@ -13,6 +13,8 @@ JString = Last(Skip(String('"')) + NoneInSet('"') + Skip(String('"')))
 
 wrapl = lambda l: [l]
 
+example_json = '{"id":1,"name":"Foo","price":123,"tags":["Bar","Eek"],"stock":{"warehouse":300, "retail":20}}'
+
 class Value(Parser):
     """Bare-bones, but fully functioning, JSON parser. Doesn't like escaped quotes.
 
@@ -35,14 +37,17 @@ class Value(Parser):
 
 # An entry is any value.
 entry = Value()
-# A mid entry is a value followed by a comma.
-midentry = entry + Skip(String(','))
+# A mid entry is a value followed by a comma. Last ensures that the result
+# is an entry, not a list of one entry.
+midentry = Last(entry + Skip(String(',')))
 # A list is a [, followed by mid entries, followed by a final entry, and a
 # closing ]. The list is wrapped in a list to prevent merging in other parsers.
-List = (Skip(String('[')) +
+# Flatten() takes care that the list from Repeat() and the single entry are made
+# into one list.
+List = Flatten(Skip(String('[')) +
         Repeat(midentry, -1) +
         entry +
-        Skip(String(']'))) >> wrapl # Wrap list inside another list to protect it from flattening.
+        Skip(String(']')))
 
 # DICTS
 
@@ -50,7 +55,7 @@ List = (Skip(String('[')) +
 separator = Skip((Whitespace() + String(":") + Whitespace()))
 # Entry is a String followed by a separator and a value. Wrap the value in a list to prevent merging.
 # The two-element list is converted to a tuple.
-entry = (JString + separator + (Value() >> wrapl)) >> (lambda l: tuple(l))
+entry = JString + separator + (Value()) >> (lambda l: tuple(l))
 # A mid entry is followed by a comma.
 midentry = Last(entry + Skip(String(',') + Skip(Whitespace())))
 # A dict is a {, followed by entries, followed by a final entry, followed by a closing }
