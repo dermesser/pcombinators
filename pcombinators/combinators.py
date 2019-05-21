@@ -143,6 +143,19 @@ class _Sequence(Parser):
 
     def __init__(self, *parsers):
         self._parsers = parsers
+        self._flatten()
+
+    def _flatten(self):
+        if len(self._parsers) == 0:
+            return
+        result = []
+        for (i, p) in enumerate(self._parsers):
+            if isinstance(p, type(self)):
+                p._flatten()
+                result.extend(p._parsers)
+            else:
+                result.append(p)
+        self._parsers = result
 
     def parse(self, st):
         results = []
