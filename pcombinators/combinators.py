@@ -7,14 +7,6 @@ The monad here is the result tuple (result, ParseState), which is returned
 by all Parser's parse() method.
 """
 
-class Util:
-    def extend_results(a, e):
-        if isinstance(e, list):
-            a.extend(e)
-        else:
-            a.append(e)
-        return a
-
 def ps(s):
     return ParseState(s)
 
@@ -169,7 +161,8 @@ class _Sequence(Parser):
                     return None, st
                 st.reset(before)
                 break
-            Util.extend_results(results, result)
+            if result is not SKIP_MARKER:
+                results.append(result)
             st = st2
         return results, st2
 
@@ -214,8 +207,11 @@ class _Repeat(Parser):
                 if self._strict:
                     st.reset(initial)
                     return None, st
+                if len(results) == 0:
+                    return SKIP_MARKER, st2
                 return results, st2
-            Util.extend_results(results, r)
+            if r is not SKIP_MARKER:
+                results.append(r)
             st = st2
             i += 1
         return results, st
@@ -288,10 +284,26 @@ def Last(p):
     """Return the last result from the list of results of p. Result is scalar."""
     return p >> (lambda l: l[-1] if isinstance(l, list) else l)
 
+SKIP_MARKER = []
+
 def Skip(p):
     """Omit the result of parser p, and replace it with []. Result is []."""
-    return p >> (lambda r: [])
+    return p >> (lambda r: SKIP_MARKER)
 
 def ConcatenateResults(p):
     """Concatenate string results into a single string. Result is string."""
     return p >> (lambda l: ''.join(l) if l and len(l) > 0 else None)
+
+def Flatten(p):
+    """Flatten the list result of a parser p (merge inner lists). Result is list."""
+    def flatten(l):
+        r = []
+        if type(l) is not list:
+            return l
+        for e in l:
+            if type(e) is list:
+                r.extend(e)
+            else:
+                r.append(e)
+        return r
+    return p >> flatten
