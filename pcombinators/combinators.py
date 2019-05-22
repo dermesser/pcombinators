@@ -7,8 +7,6 @@ The monad here is the result tuple (result, ParseState), which is returned
 by all Parser's parse() method.
 """
 
-from pcombinators.state import ParseState
-
 class Parser:
     """Super class for all parsers. Implements operator overloading for easier
     chaining of parsers."""
