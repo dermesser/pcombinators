@@ -6,8 +6,8 @@ Let's test the combinators in a real world application!
 @author: lbo
 """
 
-from combinators import *
-from primitives import *
+from pcombinators.combinators import *
+from pcombinators.primitives import *
 
 def Parens():
     """Parentheses contain a term."""
