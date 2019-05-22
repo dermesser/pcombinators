@@ -6,8 +6,8 @@ Example on how to write a JSON parser.
 @author: lbo
 """
 
-from combinators import *
-from primitives import *
+from pcombinators.combinators import *
+from pcombinators.primitives import *
 
 JString = Last(Skip(String('"')) + NoneInSet('"') + Skip(String('"')))
 
@@ -35,6 +35,14 @@ class Value(Parser):
 
 # LISTS
 
+def concat_elems_elem(l):
+    if len(l) == 1:
+        return l
+    elif len(l) == 2 and type(l[0]) is list:
+        l[0].append(l[1])
+        return l[0]
+    assert False, "Unexpected list format: {}".format(l)
+
 # An entry is any value.
 entry = Value()
 # A mid entry is a value followed by a comma. Last ensures that the result
@@ -44,9 +52,8 @@ midentry = Last(entry + Skip(String(',')))
 # closing ]. The list is wrapped in a list to prevent merging in other parsers.
 # Flatten() takes care that the list from Repeat() and the single entry are made
 # into one list.
-List = Flatten(Skip(String('[')) +
-        Repeat(midentry, -1) +
-        entry +
+List = Last(Skip(String('[')) +
+        ((Repeat(midentry, -1) + entry) >> concat_elems_elem) +
         Skip(String(']')))
 
 # DICTS
