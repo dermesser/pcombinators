@@ -111,8 +111,9 @@ class ParseFileState(_State):
         # No holds left, forget everything up to now.
         if len(self._holds) == 0:
             self._buf = self._buf[self._index:]
-        else: # Find oldest hold and update buffer to hold everything from the oldest hold onwards.
-            assert sorted(self._holds) == self._holds
+            self._total_offset += self._index
+            self._index = 0
+        elif self._holds[0]-self._total_offset > 0: # Find oldest hold and update buffer to hold everything from the oldest hold onwards.
             to_clean = self._holds[0]-self._total_offset
             self._buf = self._buf[to_clean:]
             self._total_offset += to_clean
@@ -183,17 +184,16 @@ class ParseState(_State):
     def next(self):
         if self.finished():
             return None
-        current = self.peek()
         self._index += 1
-        return current
+        return self._input[self._index-1]
 
     def advance(self, n):
         self._index += n
 
     def peek(self):
-        if self.finished():
-            return None
-        return self._input[self._index]
+        if self._index < len(self._input):
+            return self._input[self._index]
+        return None
 
     def index(self):
         return self._index
