@@ -16,11 +16,11 @@ def Parens():
 
 def Variable():
     """A variable consists of several letters."""
-    return Last(Skip(Whitespace()) + Regex('[a-zA-Z]+[0-9]*'))
+    return Regex('[a-zA-Z]+[0-9]*')
 
 def Atom():
     """An atom is a variable or a float or a parentheses term."""
-    return (Variable() | Parens() | Last(Skip(Whitespace()) + Float()))
+    return Skip(Whitespace()).then((Variable() | Parens() | Float()))
 
 def Operator(set):
     """An operator or parenthesis."""
