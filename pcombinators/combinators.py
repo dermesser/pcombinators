@@ -148,7 +148,7 @@ class _Repeat(Parser):
 
     def parse(self, st):
         results = []
-        hold = st.hold()
+        hold = st.hold() if self._strict else None
         i = 0
 
         while i < self._times or self._times < 0:
@@ -157,7 +157,7 @@ class _Repeat(Parser):
                 if self._strict:
                     st.reset(hold)
                     return None, st
-                st.release(hold)
+                assert hold is None
                 if len(results) == 0:
                     return SKIP_MARKER, st2
                 return results, st2
