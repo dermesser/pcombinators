@@ -144,6 +144,8 @@ class _Repeat(Parser):
 
     def parse(self, st):
         results = []
+        # We only need to remember where we started in case we need to actually
+        # come back here, i.e. if this is a strict repeat.
         hold = st.hold() if self._strict else None
         i = 0
 
@@ -195,7 +197,9 @@ class FirstAlternative(_Alternative):
         return None, st
 
 class LongestAlternative(_Alternative):
-    """Attempt all parsers and return the longest match. Result is result of best parser."""
+    """Attempt all parsers and return the longest match. Result is result of best parser.
+
+    Note: somewhat expensive due to backtracking."""
 
     def parse(self, st):
         matches = []
@@ -204,14 +208,12 @@ class LongestAlternative(_Alternative):
         for p in self._parsers:
             r, st2 = p.parse(st)
             if r is None:
-                st.reset(hold)
                 continue
             matches.append((st2.index() - initial, r))
             st = st2
             st.reset(hold)
 
         if len(matches) == 0:
-            st.reset(hold)
             return None, st
         # Stable sort!
         matches.sort(key=lambda t: t[0])
