@@ -42,16 +42,13 @@ def concat_elems_elem(l):
     assert False, "Unexpected list format: {}".format(l)
 
 # An entry is any value.
-entry = Value()
-# A mid entry is a value followed by a comma. Last ensures that the result
-# is an entry, not a list of one entry.
-midentry = Last(entry + Skip(String(',')))
+entry = Last(Value() + Skip(String(',') | Nothing()))
 # A list is a [, followed by mid entries, followed by a final entry, and a
 # closing ]. The list is wrapped in a list to prevent merging in other parsers.
 # Flatten() takes care that the list from Repeat() and the single entry are made
 # into one list.
 List = Last(Skip(String('[')) +
-        ((Repeat(midentry, -1) + entry) >> concat_elems_elem) +
+        Repeat(entry, -1) +
         Skip(String(']')))
 
 # DICTS
