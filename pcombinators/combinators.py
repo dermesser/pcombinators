@@ -188,16 +188,10 @@ class FirstAlternative(_Alternative):
     """Attempt parsers until one matches. Result is result of that parser."""
 
     def parse(self, st):
-        hold = st.hold()
         for p in self._parsers:
-            before = st.hold()
             r, st2 = p.parse(st)
             if r is not None:
-                st.release(before)
-                st.release(hold)
                 return r, st2
-            st.reset(before)
-        st.reset(hold)
         return None, st
 
 class LongestAlternative(_Alternative):
