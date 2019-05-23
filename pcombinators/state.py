@@ -9,6 +9,7 @@ Created on Wed May 22 21:41:32 2019
 import io
 
 def ps(s):
+    """Wrap a string in a ParseState, making it suitable for parsing."""
     return ParseState(s)
 
 class _State:
