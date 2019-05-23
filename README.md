@@ -43,3 +43,6 @@ def upper(s):
 ).parse(ParseState("hello world 2.2"))
 # >> (['HELLO', 'WORLD', 4.4], ParseState(hello world 2.2<>))
 ```
+
+NOTE: pcombinators is super slow right now... it could likely benefit from tightening parsers and
+making fewer calls to sub-parsers. Production use isn't quite recommended :)
