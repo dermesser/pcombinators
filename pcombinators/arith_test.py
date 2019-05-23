@@ -10,8 +10,6 @@ from pcombinators.state import ParseState
 from pcombinators.combinators import *
 from pcombinators.primitives import *
 
-skip_whitespace = Skip(Whitespace())
-
 def Parens():
     """Parentheses contain a term."""
     return (Operator('(') + Term() + Operator(')')) >> (lambda l: l[1])
@@ -22,7 +20,9 @@ def Variable():
 
 def Atom():
     """An atom is a variable or a float or a parentheses term."""
-    return Skip(Whitespace()).then((Variable() | Parens() | Float()))
+    return (Variable() | Parens() | Float())
+
+atom = Atom()
 
 def Operator(set):
     """An operator or parenthesis."""
@@ -38,25 +38,33 @@ def operator_result_to_tuple(l):
         raise Exception("Parse failed: Missing operand")
 
 class Power():
+    ops = Operator('^')
 
     def parse(self, st):
-        p = OptimisticSequence(Atom(), Operator('^') + Power()) >> operator_result_to_tuple
+        p = OptimisticSequence(atom, self.ops + power) >> operator_result_to_tuple
         return p.parse(st)
 
+power = Power()
+
 class Product(Parser):
+    ops = Operator('*/')
 
     def parse(self, st):
         # Try to parse an atom, a product operator, and another product.
-        p = OptimisticSequence(Power(), skip_whitespace, Operator('*/') + skip_whitespace + Product()) >> operator_result_to_tuple
+        p = OptimisticSequence(power, self.ops + product) >> operator_result_to_tuple
         return p.parse(st)
 
-class Term(Parser):
+product = Product()
 
+class Term(Parser):
+    ops = Operator('+-')
     def parse(self, st):
         # Try to parse a product, then a sum operator, then another term.
         # OptimisticSequence will just return a product if there is no sum operator.
-        p = OptimisticSequence(Product(), skip_whitespace, Operator('+-') + skip_whitespace + Term()) >> operator_result_to_tuple
+        p = OptimisticSequence(product, self.ops + term) >> operator_result_to_tuple
         return p.parse(st)
+
+term = Term()
 
 def pretty_print(tpl):
     # tpl is a (left, op, right) tuple or a scalar.
@@ -67,7 +75,7 @@ def pretty_print(tpl):
 
 def parse_and_print(expr):
     """Parse an expression string and return a string of the parsing result."""
-    parsed, st = Term().parse(ParseState(expr))
+    parsed, st = Term().parse(ParseState(expr.replace(' ', '')))
     if parsed is None:
         print('Parse error :(', st)
         return
