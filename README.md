@@ -46,3 +46,13 @@ def upper(s):
 
 NOTE: pcombinators is super slow right now... it could likely benefit from tightening parsers and
 making fewer calls to sub-parsers. Production use isn't quite recommended :)
+
+## Performance tips
+
+* Cache parsers instead of reconstructing them (usually only slight impact)
+* Push parsers upwards: `Skip(Whitespace()).then(A() | B() | C())` is a lot cheaper than
+`Skip(Whitespace()).then(A()) | ...` because the need for backtracking is greatly reduced.
+ * Or remove all whitespace before starting to parse. This is saving A LOT of time.
+* Write native parsers for frequently occurring strings. See `primitives.py` for a canonical and a
+ fast implementation of integer and float parsing.
+
