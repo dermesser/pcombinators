@@ -72,7 +72,7 @@ class _State:
     def finished(self):
         return self.index() == self.len()
 
-    def remaining(self):
+    def remaining(self, nmin):
         raise NotImplementedError()
 
     class ParseException(Exception):
@@ -88,7 +88,7 @@ class ParseFileState(_State):
     _total_offset = 0 # Index of first _buf entry in stream since start
 
     def __repr__(self):
-        return 'PFS(ix={}, to={}, buf={})'.format(self._index, self._total_offset, self._buf)
+        return 'PFS(ix={}, to={}, buf="{}")'.format(self._index, self._total_offset, ''.join(self._buf))
 
     def __init__(self, f):
         self._stream_finished = False
@@ -152,10 +152,11 @@ class ParseFileState(_State):
         self.fill_buffer(self._index + n)
         self._index += n
 
-    def remaining(self):
-        print('warning: remaining() on ParseFileState is only accurate to up to {} characters lookahead and expensive'.format(self.PREFIL))
-        self.fill_buffer(self.PREFILL)
-        return self._buf[self._index:]
+    def remaining(self, nmin=-1):
+        self.fill_buffer(self.PREFILL if nmin == -1 else nmin)
+        if nmin == -1:
+            return ''.join(self._buf[self._index:])
+        return ''.join(self._buf[self._index:self._index+nmin])
 
     def len(self):
         print('warning: len() is inaccurate on ParseFileState, returning only past and present state')
@@ -213,7 +214,9 @@ class ParseState(_State):
     def finished(self):
         return self._index == len(self._input)
 
-    def remaining(self):
+    def remaining(self, nmin=-1):
         if self.finished():
             return ''
-        return self._input[self._index:]
+        if nmin == -1:
+            return self._input[self._index:]
+        return self._input[self._index:self._index+nmin]
