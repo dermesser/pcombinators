@@ -38,6 +38,9 @@ class _State:
     def _maybe_collect(self):
         pass
 
+    # Generic hold implementation based on hooks in base classes
+    # (_maybe_collect(), _reset_index())
+
     def hold(self):
         self._holds.append(self.index())
         hold = _State.ParserHold()
@@ -107,7 +110,11 @@ class ParseFileState(_State):
         if self._fobj:
             self._fobj.close()
 
+    COLLECT_LOWER_LIMIT = 1024
+
     def _maybe_collect(self):
+        if len(self._buf) < self.COLLECT_LOWER_LIMIT:
+            return
         # No holds left, forget everything up to now.
         if len(self._holds) == 0:
             self._buf = self._buf[self._index:]
@@ -182,6 +189,26 @@ class ParseState(_State):
         else:
             return 'ParseState({}<>)'.format(self._input)
 
+    # We override hold/release/reset here because ParseState holds the entire
+    # input in memory all the time. Thus we only need to use holds for resets,
+    # but not for garbage collection.
+
+    def hold(self):
+        hold = _State.ParserHold()
+        hold.total_index = self.index()
+        return hold
+
+    def release(self, hold):
+        """Release a hold. Generally called when a parser was successful."""
+        assert hold.total_index >= 0, 'double release'
+        hold.total_index = -1
+
+    def reset(self, hold):
+        """Release hold and reset index to its position."""
+        assert hold.total_index >= 0, 'double reset'
+        self._index = hold.total_index
+        hold.total_index = -2
+
     def next(self):
         if self.finished():
             return None
@@ -201,9 +228,6 @@ class ParseState(_State):
 
     def len(self):
         return len(self._input)
-
-    def _reset_index(self, ix):
-        self._index = ix
 
     def __iter__(self):
         return self
