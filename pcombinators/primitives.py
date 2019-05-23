@@ -27,15 +27,16 @@ class String(Parser):
         self._s = s
 
     def parse(self, st):
-        initial = st.index()
+        hold = st.hold()
         s = self._s
         i = 0
-        while i < len(s) and not st.finished() and s[i] == st.peek():
+        while i < len(s) and s[i] == st.peek():
             st.next()
             i += 1
         if i == len(s):
+            st.release(hold)
             return (self._s, st)
-        st.reset(initial)
+        st.reset(hold)
         return (None, st)
 
 class OneOf(Parser):
@@ -72,7 +73,6 @@ class Regex(Parser):
         self._rx = rx
 
     def parse(self, st):
-        start = st.index()
         match = re.match(self._rx, st.remaining())
         if match is None:
             return None, st
@@ -82,7 +82,7 @@ class Regex(Parser):
             result = list(match.groups())
         elif len(match.groups()) > 0:
             result = match.group(1)
-        st.reset(start+end)
+        st.advance(end)
         return result, st
 
 def Nothing():
@@ -135,21 +135,23 @@ class Float(Parser):
     _digits = CharSet('0123456789')
 
     def parse(self, st):
-        initial = st.index()
+        hold = st.hold()
         multiplier = 1
         minus, st = String('-').parse(st)
         if minus is not None:
             multiplier = -1
         big, st = self._digits.parse(st)
         if big is None:
-            st.reset(initial)
+            st.reset(hold)
             return None, st
         small = ''
         dot, st = String('.').parse(st)
         if dot is not None:
             small, st = self._digits.parse(st)
             if small is not None:
+                st.release(hold)
                 return float(big + '.' + small) * multiplier, st
+        st.release(hold)
         return float(big) * multiplier, st
 
 class Integer(Parser):
@@ -160,13 +162,14 @@ class Integer(Parser):
     _digits = CharSet('0123456789')
 
     def parse(self, st):
-        initial = st.index()
+        hold = st.hold()
         multiplier = 1
         minus, st = String('-').parse(st)
         if minus is not None:
             multiplier = -1
         digits, st = self._digits.parse(st)
         if digits is not None:
+            st.release(hold)
             return int(digits)*multiplier, st
-        st.reset(initial)
+        st.reset(hold)
         return None, st

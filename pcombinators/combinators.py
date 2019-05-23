@@ -64,15 +64,17 @@ class _Transform(Parser):
         self._transform = tf
 
     def parse(self, st):
-        initial = st.index()
+        hold = st.hold()
         r, st2 = self._inner.parse(st)
         if r is None:
-            st.reset(initial)
+            st.reset(hold)
             return None, st
         try:
-            return self._transform(r), st2
+            r2 =  self._transform(r)
+            st2.release(hold)
+            return r2, st2
         except Exception as e:
-            st.reset(initial)
+            st.reset(hold)
             raise Exception('{} (at {} (col {}))'.format(e, st, st.index()))
 
 class _Sequence(Parser):
@@ -97,19 +99,21 @@ class _Sequence(Parser):
 
     def parse(self, st):
         results = []
-        initial = st.index()
+        hold = st.hold()
         for p in self._parsers:
-            before = st.index()
+            before = st.hold()
             result, st2 = p.parse(st)
             if result is None:
-                if self._atomic:
-                    st.reset(initial)
-                    return None, st
                 st.reset(before)
+                if self._atomic:
+                    st.reset(hold)
+                    return None, st
                 break
             if result is not SKIP_MARKER:
                 results.append(result)
             st = st2
+            st.release(before)
+        st.release(hold)
         return results, st2
 
 
@@ -144,15 +148,16 @@ class _Repeat(Parser):
 
     def parse(self, st):
         results = []
-        initial = st.index()
+        hold = st.hold()
         i = 0
 
         while i < self._times or self._times < 0:
             r, st2 = self._parser.parse(st)
             if r == None:
                 if self._strict:
-                    st.reset(initial)
+                    st.reset(hold)
                     return None, st
+                st.release(hold)
                 if len(results) == 0:
                     return SKIP_MARKER, st2
                 return results, st2
@@ -160,6 +165,7 @@ class _Repeat(Parser):
                 results.append(r)
             st = st2
             i += 1
+        st.release(hold)
         return results, st
 
 class StrictRepeat(_Repeat):
@@ -186,12 +192,16 @@ class FirstAlternative(_Alternative):
     """Attempt parsers until one matches. Result is result of that parser."""
 
     def parse(self, st):
-        initial = st.index()
+        hold = st.hold()
         for p in self._parsers:
+            before = st.hold()
             r, st2 = p.parse(st)
             if r is not None:
+                st.release(before)
+                st.release(hold)
                 return r, st2
-            st.reset(initial)
+            st.reset(before)
+        st.reset(hold)
         return None, st
 
 class LongestAlternative(_Alternative):
@@ -199,18 +209,19 @@ class LongestAlternative(_Alternative):
 
     def parse(self, st):
         matches = []
+        hold = st.hold()
         initial = st.index()
         for p in self._parsers:
             r, st2 = p.parse(st)
             if r is None:
-                st.reset(initial)
+                st.reset(hold)
                 continue
             matches.append((st2.index() - initial, r))
             st = st2
-            st.reset(initial)
+            st.reset(hold)
 
         if len(matches) == 0:
-            st.reset(initial)
+            st.reset(hold)
             return None, st
         # Stable sort!
         matches.sort(key=lambda t: t[0])
@@ -221,7 +232,8 @@ class LongestAlternative(_Alternative):
             if r[0] < best[0]:
                 break
             best = r
-        st.reset(initial + best[0])
+        st.advance(best[0])
+        st.release(hold)
         return best[1], st
 
 # Some combinators can be implemented directly.
