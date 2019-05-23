@@ -62,10 +62,10 @@ separator = Skip(String(":"))
 # The two-element list is converted to a tuple.
 entry = JString + separator + (Value()) >> (lambda l: tuple(l))
 # A mid entry is followed by a comma.
-midentry = Last(entry + Skip(String(',')))
+midentry = Last(entry + Skip(String(',') | Nothing()))
 # A dict is a {, followed by entries, followed by a final entry, followed by a closing }
 dct = Flatten(
-        Skip(String("{")) + ((Repeat(midentry, -1) + entry)) + Skip(String("}")))
+        Skip(String("{")) + Repeat(midentry, -1) + Skip(String("}")))
 # Convert the list of tuples into a dict.
 Dict = dct >> dict
 
