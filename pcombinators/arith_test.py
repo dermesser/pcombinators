@@ -69,4 +69,4 @@ def parse_and_print(expr):
     if parsed is None:
         print('Parse error :(', st)
         return
-    print(pretty_print(parsed))
+    return pretty_print(parsed)
