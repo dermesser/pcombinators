@@ -10,6 +10,8 @@ from pcombinators.state import ParseState
 from pcombinators.combinators import *
 from pcombinators.primitives import *
 
+skip_whitespace = Skip(Whitespace())
+
 def Parens():
     """Parentheses contain a term."""
     return (Operator('(') + Term() + Operator(')')) >> (lambda l: l[1])
@@ -24,7 +26,7 @@ def Atom():
 
 def Operator(set):
     """An operator or parenthesis."""
-    return Last(Skip(Whitespace()) + OneOf(set))
+    return OneOf(set)
 
 def operator_result_to_tuple(l):
     if len(l) == 1:
@@ -45,7 +47,7 @@ class Product(Parser):
 
     def parse(self, st):
         # Try to parse an atom, a product operator, and another product.
-        p = OptimisticSequence(Power(), Operator('*/') + Product()) >> operator_result_to_tuple
+        p = OptimisticSequence(Power(), skip_whitespace, Operator('*/') + skip_whitespace + Product()) >> operator_result_to_tuple
         return p.parse(st)
 
 class Term(Parser):
@@ -53,7 +55,7 @@ class Term(Parser):
     def parse(self, st):
         # Try to parse a product, then a sum operator, then another term.
         # OptimisticSequence will just return a product if there is no sum operator.
-        p = OptimisticSequence(Product(), Operator('+-') + Term()) >> operator_result_to_tuple
+        p = OptimisticSequence(Product(), skip_whitespace, Operator('+-') + skip_whitespace + Term()) >> operator_result_to_tuple
         return p.parse(st)
 
 def pretty_print(tpl):
