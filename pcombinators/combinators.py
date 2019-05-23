@@ -15,6 +15,8 @@ class Parser:
     def parse(self, st):
         """Call parse() on any class inheriting from this one. It will consume
         the ParseState st and return the parse result (depending on the parsers used).
+
+        None indicates a failed parse. In this case, st must be returned with unmodified position.
         """
         return (None, st)
 
@@ -64,17 +66,13 @@ class _Transform(Parser):
         self._transform = tf
 
     def parse(self, st):
-        hold = st.hold()
         r, st2 = self._inner.parse(st)
         if r is None:
-            st.reset(hold)
             return None, st
         try:
             r2 = self._transform(r)
-            st2.release(hold)
             return r2, st2
         except Exception as e:
-            st.reset(hold)
             raise Exception('{} (at {} (col {}))'.format(e, st, st.index()))
 
 class _Sequence(Parser):
@@ -99,12 +97,10 @@ class _Sequence(Parser):
 
     def parse(self, st):
         results = []
-        hold = st.hold()
+        hold = st.hold() if self._atomic else None
         for p in self._parsers:
-            before = st.hold()
             result, st2 = p.parse(st)
             if result is None:
-                st.reset(before)
                 if self._atomic:
                     st.reset(hold)
                     return None, st
@@ -112,8 +108,8 @@ class _Sequence(Parser):
             if result is not SKIP_MARKER:
                 results.append(result)
             st = st2
-            st.release(before)
-        st.release(hold)
+        if self._atomic:
+            st.release(hold)
         return results, st2
 
 
