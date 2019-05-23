@@ -6,6 +6,7 @@ Let's test the combinators in a real world application!
 @author: lbo
 """
 
+from pcombinators.state import ParseState
 from pcombinators.combinators import *
 from pcombinators.primitives import *
 
@@ -34,8 +35,11 @@ def operator_result_to_tuple(l):
         # Parse failed if not either 1 or 3.
         raise Exception("Parse failed: Missing operand")
 
-def Power():
-    return (OptimisticSequence(Atom(), Operator('^') + Atom()) >> operator_result_to_tuple)
+class Power():
+
+    def parse(self, st):
+        p = OptimisticSequence(Atom(), Operator('^') + Power()) >> operator_result_to_tuple
+        return p.parse(st)
 
 class Product(Parser):
 
@@ -61,7 +65,7 @@ def pretty_print(tpl):
 
 def parse_and_print(expr):
     """Parse an expression string and return a string of the parsing result."""
-    parsed, st = Term().parse(ps(expr))
+    parsed, st = Term().parse(ParseState(expr))
     if parsed is None:
         print('Parse error :(', st)
         return
