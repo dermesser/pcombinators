@@ -181,6 +181,8 @@ class ParseState(_State):
             return 'ParseState({}<>)'.format(self._input)
 
     def next(self):
+        if self.finished():
+            return None
         current = self.peek()
         self._index += 1
         return current
@@ -189,6 +191,8 @@ class ParseState(_State):
         self._index += n
 
     def peek(self):
+        if self.finished():
+            return None
         return self._input[self._index]
 
     def index(self):
