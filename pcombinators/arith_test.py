@@ -37,32 +37,30 @@ def operator_result_to_tuple(l):
         # Parse failed if not either 1 or 3.
         raise Exception("Parse failed: Missing operand")
 
-class Power():
+class Power(Parser):
     ops = Operator('^')
-
+    p = OptimisticSequence(atom, Power.ops + power) >> operator_result_to_tuple
     def parse(self, st):
-        p = OptimisticSequence(atom, self.ops + power) >> operator_result_to_tuple
-        return p.parse(st)
+        return self.p.parse(st)
 
 power = Power()
 
 class Product(Parser):
     ops = Operator('*/')
-
+    p = OptimisticSequence(power, Product.ops + product) >> operator_result_to_tuple
     def parse(self, st):
         # Try to parse an atom, a product operator, and another product.
-        p = OptimisticSequence(power, self.ops + product) >> operator_result_to_tuple
-        return p.parse(st)
+        return self.p.parse(st)
 
 product = Product()
 
 class Term(Parser):
     ops = Operator('+-')
+    p = OptimisticSequence(product, Term.ops + term) >> operator_result_to_tuple
     def parse(self, st):
         # Try to parse a product, then a sum operator, then another term.
         # OptimisticSequence will just return a product if there is no sum operator.
-        p = OptimisticSequence(product, self.ops + term) >> operator_result_to_tuple
-        return p.parse(st)
+        return self.p.parse(st)
 
 term = Term()
 
