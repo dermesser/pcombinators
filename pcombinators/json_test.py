@@ -11,7 +11,7 @@ from pcombinators.primitives import *
 
 JString = Last(Skip(String('"')) + NoneInSet('"') + Skip(String('"')))
 
-example_json = '{"id":1,"name":"Foo","price":123,"tags":["Bar","Eek"],"stock":{"warehouse":300, "retail":20}}'
+example_json = '{"id":1,"name":"Foo","price":123,"tags":["Bar","Eek"],"stock":{"warehouse":300,"retail":20}}'
 
 class Value(Parser):
     """Bare-bones, but fully functioning, JSON parser. Doesn't like escaped quotes.
@@ -23,7 +23,7 @@ class Value(Parser):
           'price': 123.0,
           'tags': ['Bar', 'Eek'],
           'stock': {'warehouse': 300.0, 'retail': 20.0}},
-         ParseState({"id":1,"name":"Foo","price":123,"tags":["Bar","Eek"],"stock":{"warehouse":300, "retail":20}}<>))
+         ParseState({"id":1,"name":"Foo","price":123,"tags":["Bar","Eek"],"stock":{"warehouse":300,"retail":20}}<>))
     """
     def parse(self, st):
         return (Dict | List | JString | Float()).parse(st)
@@ -66,5 +66,17 @@ dct = Flatten(
 # Convert the list of tuples into a dict.
 Dict = dct >> dict
 
+def remove_unused_whitespace(s):
+    acc = []
+    lvl = 0
+    ws = set(' \n\t\r')
+    for c in s:
+        if c == '"':
+            lvl += 1 if lvl == 0 else -1
+        if lvl == 0 and c in ws:
+            continue
+        acc.append(c)
+    return ''.join(acc)
+
 def parse_json(json):
-    return Dict.parse(ParseState(json.replace(' ', '')))
+    return Value().parse(ParseState(remove_unused_whitespace(json)))
