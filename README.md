@@ -5,6 +5,10 @@ always been fascinated by them, so I wanted to try if I can implement them :-)
 
 There are examples in the form of
 * a JSON parser in `pcombinators/json_test.py` and
+ * test it with `parse_json('{"ob": "ject"}')` or `Value().parse(ParseFileState('test.json'))`.
+ * It does not accept whitespace except in strings. `parse_json()` takes care
+ of this in a simple way, but keep this in mind when trying to parse your own
+ input.
 * a parser for arithmetic expressions in `pcombinators/arith_test.py`.
 
 More simple examples:
@@ -44,7 +48,8 @@ def upper(s):
 # >> (['HELLO', 'WORLD', 4.4], ParseState(hello world 2.2<>))
 ```
 
-NOTE: pcombinators is super slow right now... it could likely benefit from tightening parsers and
+NOTE: pcombinators is quite slow right now, especially if you don't take care
+of performance yourself... it could likely benefit from tightening parsers and
 making fewer calls to sub-parsers. Production use isn't quite recommended :)
 
 ## Performance tips
