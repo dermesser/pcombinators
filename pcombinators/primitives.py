@@ -27,16 +27,10 @@ class String(Parser):
         self._s = s
 
     def parse(self, st):
-        hold = st.hold()
-        s = self._s
-        i = 0
-        while i < len(s) and s[i] == st.peek():
-            st.next()
-            i += 1
-        if i == len(s):
-            st.release(hold)
-            return (self._s, st)
-        st.reset(hold)
+        potential = st.remaining(len(self._s))
+        if potential.startswith(self._s):
+            st.advance(len(self._s))
+            return self._s, st
         return (None, st)
 
 class OneOf(Parser):
