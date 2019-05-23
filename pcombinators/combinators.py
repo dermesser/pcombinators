@@ -70,7 +70,7 @@ class _Transform(Parser):
             st.reset(hold)
             return None, st
         try:
-            r2 =  self._transform(r)
+            r2 = self._transform(r)
             st2.release(hold)
             return r2, st2
         except Exception as e:

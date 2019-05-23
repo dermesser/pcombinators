@@ -33,16 +33,16 @@ class _State:
     # Holds are a simple garbage collection mechanism by which parsers should
     # indicate which parts of state they may still backtrack to.
     class ParserHold:
-        def __init__(self, i):
-            self.total_index = i
-        total_index = 0
+        pass
 
     def _maybe_collect(self):
         pass
 
     def hold(self):
         self._holds.append(self.index())
-        return self.ParserHold(self.index())
+        hold = _State.ParserHold()
+        hold.total_index = self.index()
+        return hold
 
     def release(self, hold):
         """Release a hold. Generally called when a parser was successful."""
