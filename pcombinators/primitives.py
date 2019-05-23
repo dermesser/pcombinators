@@ -122,7 +122,11 @@ def NonEmptyString():
     return Last(Whitespace() + Regex('\w+'))
 
 def Whitespace():
-    """Parse whitespace (space, newline, tab). Result is string."""
+    """Parse whitespace (space, newline, tab). Result is string.
+
+    WARNING: Applying this everywhere is very expensive. If possible, try to
+    remove whitespace from the input and not use whitespace parsers at all.
+    """
     return CharSet(' \n\r\t') | Nothing()
 
 # Optimized parsers
