@@ -110,6 +110,8 @@ class _Sequence(Parser):
             st = st2
         if self._atomic:
             st.release(hold)
+        if len(results) == 0:
+            return None, st2
         return results, st2
 
 
