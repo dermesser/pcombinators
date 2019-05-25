@@ -8,6 +8,8 @@ Example on how to write a JSON parser.
 
 from pcombinators.combinators import *
 from pcombinators.primitives import *
+import pcombinators.state as st
+import pcombinators.util as ut
 
 JString = Last(Skip(String('"')) + NoneInSet('"') + Skip(String('"')))
 
@@ -66,17 +68,9 @@ dct = Flatten(
 # Convert the list of tuples into a dict.
 Dict = dct >> dict
 
-def remove_unused_whitespace(s):
-    acc = []
-    lvl = 0
-    ws = set(' \n\t\r')
-    for c in s:
-        if c == '"':
-            lvl += 1 if lvl == 0 else -1
-        if lvl == 0 and c in ws:
-            continue
-        acc.append(c)
-    return ''.join(acc)
-
 def parse_json(json):
-    return Value().parse(ParseState(remove_unused_whitespace(json)))
+    return Value().parse(st.ParseState(ut.remove_unused_whitespace(json)))
+
+def json_result(json):
+    r, st = parse_json(json)
+    return r

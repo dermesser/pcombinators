@@ -15,3 +15,15 @@ def time_it(f):
         print(f, time.time()-before)
         return r
     return f_
+
+def remove_unused_whitespace(s):
+    acc = []
+    lvl = 0
+    ws = set(' \n\t\r')
+    for c in s:
+        if c == '"':
+            lvl += 1 if lvl == 0 else -1
+        if lvl == 0 and c in ws:
+            continue
+        acc.append(c)
+    return ''.join(acc)
