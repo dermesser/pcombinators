@@ -50,8 +50,8 @@ class _State:
 
     def release(self, hold):
         """Release a hold. Generally called when a parser was successful."""
-        assert hold.total_index >= 0, 'double release'
-        assert self._holds[-1] == hold.total_index
+        assert hold.total_index >= 0, 'BUG: double reset/release'
+        assert self._holds[-1] == hold.total_index, 'BUG: releasing bad ordered hold'
         self._holds.pop()
         self._maybe_collect()
         hold.total_index = -1
@@ -61,8 +61,8 @@ class _State:
         # Reset is only allowed when this hold is the latest hold or later.
         # It is possible that a caller accidentally released a hold that it
         # now wants to reset to.
-        assert hold.total_index >= 0, 'double reset'
-        assert self._holds[-1] == hold.total_index
+        assert hold.total_index >= 0, 'BUG: double reset/release'
+        assert self._holds[-1] == hold.total_index, 'BUG: reset/release in bad order'
         self._reset_index(hold.total_index)
         self._holds.pop()
         hold.total_index = -2
