@@ -35,14 +35,6 @@ class Value(Parser):
 
 # LISTS
 
-def concat_elems_elem(l):
-    if len(l) == 1:
-        return l
-    elif len(l) == 2 and type(l[0]) is list:
-        l[0].append(l[1])
-        return l[0]
-    assert False, "Unexpected list format: {}".format(l)
-
 # An entry is any value.
 entry = Last(Value() + Skip(String(',') | Nothing()))
 # A list is a [, followed by mid entries, followed by a final entry, and a
