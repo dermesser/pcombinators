@@ -4,12 +4,15 @@ Working on parser combinators for Python, in an understandable manner. I've
 always been fascinated by them, so I wanted to try if I can implement them :-)
 
 There are examples in the form of
-* a JSON parser in `pcombinators/json_test.py` and
+* a JSON parser in `pcombinators/tests/json.py` and
  * test it with `parse_json('{"ob": "ject"}')` or `Value().parse(ParseFileState('test.json'))`.
  * It does not accept whitespace except in strings. `parse_json()` takes care
  of this in a simple way, but keep this in mind when trying to parse your own
  input.
-* a parser for arithmetic expressions in `pcombinators/arith_test.py`.
+* a parser for arithmetic expressions in `pcombinators/tests/arith.py`
+* a parser for CSV files in `pcombinators/tests/csv.py`
+
+TODO: Formal documentation (although every parser is already documented now)
 
 More simple examples:
 
