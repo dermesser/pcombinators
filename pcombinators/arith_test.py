@@ -10,6 +10,10 @@ from pcombinators.state import ParseState
 from pcombinators.combinators import *
 from pcombinators.primitives import *
 
+def Operator(set):
+    """An operator or parenthesis."""
+    return OneOf(set)
+
 def Parens():
     """Parentheses contain a term."""
     return (Operator('(') + Term() + Operator(')')) >> (lambda l: l[1])
@@ -22,11 +26,29 @@ def Atom():
     """An atom is a variable or a float or a parentheses term."""
     return (Variable() | Parens() | Float())
 
-atom = Atom()
+def Product():
+    return OptimisticSequence(Power(), Operator('*/') + Lazy(Product)) >> operator_result_to_tuple
 
-def Operator(set):
-    """An operator or parenthesis."""
-    return OneOf(set)
+class Power(Parser):
+    ops = Operator('^')
+
+    def __init__(self):
+        self.p = OptimisticSequence(Lazy(Atom), self.ops + self) >> operator_result_to_tuple
+
+    def parse(self, st):
+        return self.p.parse(st)
+
+class Term(Parser):
+    ops = Operator('+-')
+
+    def __init__(self):
+        self.p = OptimisticSequence(Product(), self.ops + self) >> operator_result_to_tuple
+
+    def parse(self, st):
+        # Try to parse a product, then a sum operator, then another term.
+        # OptimisticSequence will just return a product if there is no sum operator.
+        return self.p.parse(st)
+
 
 def operator_result_to_tuple(l):
     if len(l) == 1:
@@ -36,33 +58,6 @@ def operator_result_to_tuple(l):
     else:
         # Parse failed if not either 1 or 3.
         raise Exception("Parse failed: Missing operand")
-
-class Power(Parser):
-    ops = Operator('^')
-    p = OptimisticSequence(atom, Power.ops + power) >> operator_result_to_tuple
-    def parse(self, st):
-        return self.p.parse(st)
-
-power = Power()
-
-class Product(Parser):
-    ops = Operator('*/')
-    p = OptimisticSequence(power, Product.ops + product) >> operator_result_to_tuple
-    def parse(self, st):
-        # Try to parse an atom, a product operator, and another product.
-        return self.p.parse(st)
-
-product = Product()
-
-class Term(Parser):
-    ops = Operator('+-')
-    p = OptimisticSequence(product, Term.ops + term) >> operator_result_to_tuple
-    def parse(self, st):
-        # Try to parse a product, then a sum operator, then another term.
-        # OptimisticSequence will just return a product if there is no sum operator.
-        return self.p.parse(st)
-
-term = Term()
 
 def pretty_print(tpl):
     # tpl is a (left, op, right) tuple or a scalar.

@@ -55,6 +55,9 @@ class Parser:
         parsed by the supplied next parser."""
         return Last(AtomicSequence(self, next))
 
+    def then_skip(self, next):
+        return Last(AtomicSequence(self, Skip(next)))
+
 # Combinators
 
 class _Transform(Parser):
@@ -98,6 +101,8 @@ class _Sequence(Parser):
     def parse(self, st):
         results = []
         hold = st.hold() if self._atomic else None
+        if st.finished():
+            return None, st
         for p in self._parsers:
             result, st2 = p.parse(st)
             if result is None:
@@ -105,7 +110,7 @@ class _Sequence(Parser):
                     st.reset(hold)
                     return None, st
                 break
-            if result is not SKIP_MARKER:
+            if result is not SKIP_MARKER and result is not PEEK_SUCCESS_MARKER:
                 results.append(result)
             st = st2
         if self._atomic:
@@ -150,7 +155,8 @@ class _Repeat(Parser):
         # come back here, i.e. if this is a strict repeat.
         hold = st.hold() if self._strict else None
         i = 0
-
+        if st.finished():
+            return None, st
         while i < self._times or self._times < 0:
             r, st2 = self._parser.parse(st)
             if r == None:
@@ -161,11 +167,13 @@ class _Repeat(Parser):
                 if len(results) == 0:
                     return SKIP_MARKER, st2
                 return results, st2
-            if r is not SKIP_MARKER:
+            if r is not SKIP_MARKER and r is not PEEK_SUCCESS_MARKER:
                 results.append(r)
             st = st2
             i += 1
         st.release(hold)
+        if len(results) == 0:
+            return None, st
         return results, st
 
 class StrictRepeat(_Repeat):
@@ -259,3 +267,43 @@ def Flatten(p):
                 r.append(e)
         return r
     return p >> flatten
+
+# Parse result of Peek. This is ignored by Sequence and Repeat combinators.
+PEEK_SUCCESS_MARKER = []
+
+class Peek(Parser):
+    """Look ahead and succeed only if the given parser would parse.
+    Returns [], but is ignored in Sequences (Atomic/Optimistic/+) and Repeats.
+
+    Warning: Likely slow.
+    """
+    def __init__(self, p):
+        self._parser = p
+
+    def parse(self, st):
+        hold = st.hold()
+        r, st2 = self._parser.parse(st)
+        if r is None:
+            st.release(hold)
+            return None, st
+        st.reset(hold)
+        return PEEK_SUCCESS_MARKER, st2
+
+class Lazy(Parser):
+    """A transparent wrapper for avoiding mutual recursion and definition order trouble, which
+    can occur if your syntax is infinitely recursive.
+
+    Takes a function that returns a parser, but only calls it when a parser is needed.
+    The obtained parser is then cached.
+    """
+    def __init__(self, f):
+        self._f = f
+        self._parser = None
+
+    def parser(self):
+        if self._parser is None:
+            self._parser = self._f()
+        return self._parser
+
+    def parse(self, st):
+        return self.parser().parse(st)
