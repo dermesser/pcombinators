@@ -90,6 +90,7 @@ class ParseFileState(_State):
     """A lazy parsing state implementation, reading from stream."""
     _index = 0 # Index in current _buf
     _total_offset = 0 # Index of first _buf entry in stream since start
+    _fobj = None
 
     def __repr__(self):
         return 'PFS(ix={}, to={}, buf="{}")'.format(self._index, self._total_offset, ''.join(self._buf))
@@ -120,6 +121,9 @@ class ParseFileState(_State):
             return
         # No holds left, forget everything up to now.
         if len(self._holds) == 0:
+            # This copies the entire buffer; however, we assume that it is small
+            # as it is only filled incrementally from the stream. Still, it's quadratic;
+            # this should be mitigated somewhat by the COLLECT_LOWER_LIMIT.
             self._buf = self._buf[self._index:]
             self._total_offset += self._index
             self._index = 0
