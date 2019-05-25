@@ -61,7 +61,9 @@ dct = Flatten(
 Dict = dct >> dict
 
 def parse_json(json):
-    return Value().parse(st.ParseState(ut.remove_unused_whitespace(json)))
+    if type(json) is str:
+        json = st.ParseState(ut.remove_unused_whitespace(json))
+    return Value().parse(json)
 
 def json_result(json):
     r, st = parse_json(json)

@@ -111,6 +111,8 @@ class ParseFileState(_State):
         if self._fobj:
             self._fobj.close()
 
+    # For efficiency reasons, only check for collectable buffer space when
+    # the buffer is longer than this limit.
     COLLECT_LOWER_LIMIT = 1024
 
     def _maybe_collect(self):
@@ -121,7 +123,9 @@ class ParseFileState(_State):
             self._buf = self._buf[self._index:]
             self._total_offset += self._index
             self._index = 0
-        elif self._holds[0]-self._total_offset > 0: # Find oldest hold and update buffer to hold everything from the oldest hold onwards.
+            return
+        elif self._holds[0]-self._total_offset > 0:
+            # Find oldest hold and update buffer to hold everything from the oldest hold onwards.
             to_clean = self._holds[0]-self._total_offset
             self._buf = self._buf[to_clean:]
             self._total_offset += to_clean
