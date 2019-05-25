@@ -1,5 +1,7 @@
 # pcombinators
 
+[![Build Status](https://travis-ci.org/dermesser/pcombinators.svg?branch=master)](https://travis-ci.org/dermesser/pcombinators)
+
 Working on parser combinators for Python, in an understandable manner. I've
 always been fascinated by them, so I wanted to try if I can implement them :-)
 
