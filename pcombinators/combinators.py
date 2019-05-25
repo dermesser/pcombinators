@@ -100,9 +100,9 @@ class _Sequence(Parser):
 
     def parse(self, st):
         results = []
-        hold = st.hold() if self._atomic else None
         if st.finished():
             return None, st
+        hold = st.hold() if self._atomic else None
         for p in self._parsers:
             result, st2 = p.parse(st)
             if result is None:
@@ -150,13 +150,13 @@ class _Repeat(Parser):
         self._times = repeat
 
     def parse(self, st):
+        if st.finished():
+            return None, st
         results = []
         # We only need to remember where we started in case we need to actually
         # come back here, i.e. if this is a strict repeat.
         hold = st.hold() if self._strict else None
         i = 0
-        if st.finished():
-            return None, st
         while i < self._times or self._times < 0:
             r, st2 = self._parser.parse(st)
             if r == None:
