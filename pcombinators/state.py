@@ -150,9 +150,9 @@ class ParseFileState(_State):
         return self._buf[self._index]
 
     def next(self):
+        self.fill_buffer()
         if self.finished():
             return None
-        self.fill_buffer()
         self._index += 1
         return self._buf[self._index-1]
 
