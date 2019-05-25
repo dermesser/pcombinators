@@ -1,7 +1,11 @@
 #!/bin/bash
 
+set -e
+
 export PYTHONPATH=.
 
-python3 -m pcombinators.tests.test_arith
-coverage run -m pcombinators.tests.test_arith
+for F in pcombinators/tests/test_*; do
+    coverage run ${F}
+done
+
 coverage html
