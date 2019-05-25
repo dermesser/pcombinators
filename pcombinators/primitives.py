@@ -92,6 +92,12 @@ def NoneInSet(s):
     """Inverse of CharSet (parse as long as character is not in set). Result is string."""
     return ConcatenateResults(Repeat(NoneOf(s), -1))
 
+class EndOfInput(Parser):
+    def parse(self, st):
+        if st.finished():
+            return '', st
+        return None, st
+
 # See section below for optimized versions of the following parsers.
 
 def CanonicalInteger():
