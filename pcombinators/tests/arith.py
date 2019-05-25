@@ -66,10 +66,15 @@ def pretty_print(tpl):
     assert len(tpl) == 3
     return '({} {} {})'.format(pretty_print(tpl[0]), tpl[1], pretty_print(tpl[2]))
 
-def parse_and_print(expr):
-    """Parse an expression string and return a string of the parsing result."""
-    parsed, st = Term().parse(ParseState(expr.replace(' ', '')))
+def parse(s):
+    if type(s) is str:
+        s = ParseState(s.replace(' ', ''))
+    parsed, st = Term().then_skip(EndOfInput()).parse(s)
     if parsed is None:
         print('Parse error :(', st)
-        return
-    return pretty_print(parsed)
+        return None
+    return parsed
+
+def parse_and_print(expr):
+    """Parse an expression string and return a string of the parsing result."""
+    return pretty_print(parse(expr))
